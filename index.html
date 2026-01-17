@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICF-SL Admin Level Hierarchy Extractor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { margin: 0; padding: 20px; background-color: #ffffff; font-family: 'Oswald', Arial, sans-serif; color: #000000; font-weight: 500; }
+        .page-container { width: 100%; max-width: 1400px; margin: 0 auto; }
+        .page-header { background-color: #004080; color: #ffffff; padding: 25px 30px; text-align: center; margin-bottom: 15px; border-radius: 8px 8px 0 0; }
+        .logo-row { display: flex; justify-content: center; align-items: center; gap: 30px; margin-bottom: 15px; }
+        .logo-box { background: #ffffff; border-radius: 8px; padding: 10px; display: flex; align-items: center; justify-content: center; }
+        .logo-box img { width: 100px; height: auto; border-radius: 6px; }
+        .page-header h3 { margin: 12px 0 5px; font-size: 14px; font-weight: 700; letter-spacing: 1px; color: #ffffff; }
+        .page-header .tagline { margin: 0; font-size: 10px; font-weight: 500; color: #ffffff; }
+        .page-header h1 { margin: 20px 0 10px; font-size: 24px; font-weight: 700; color: #ffffff; letter-spacing: 1px; }
+        .page-header .subtitle { font-size: 14px; color: #ffffff; font-weight: 500; }
+        .content-card { border: 4px double #004080; border-radius: 12px; padding: 12px; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .content-inner { padding: 20px; }
+        
+        .section-header { background-color: #004080; color: #ffffff; padding: 15px 20px; margin-bottom: 20px; border-radius: 6px; display: flex; align-items: center; gap: 15px; }
+        .section-icon { background: #ffffff; color: #004080; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; }
+        .section-title { font-size: 18px; font-weight: 700; }
+        
+        .upload-box { background: #f8f9fa; padding: 3rem; border-radius: 8px; border: 3px dashed #004080; text-align: center; cursor: pointer; transition: all 0.3s; margin-bottom: 20px; }
+        .upload-box:hover { background: #e7f3ff; }
+        .upload-box.loaded { border-style: solid; border-color: #28a745; background: #d4edda; }
+        .upload-box h4 { color: #004080; margin-bottom: 0.5rem; font-size: 18px; }
+        .upload-box p { font-size: 13px; color: #666; }
+        .upload-box input { display: none; }
+        .upload-status { font-size: 14px; font-weight: 700; margin-top: 15px; }
+        .upload-status.success { color: #28a745; }
+        
+        .btn { padding: 12px 20px; border: 2px solid #004080; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; text-transform: uppercase; font-family: 'Oswald', Arial, sans-serif; transition: all 0.2s; margin: 4px; }
+        .btn-primary { background: #004080; color: #fff; }
+        .btn-primary:hover { background: #0056b3; }
+        .btn-secondary { background: #fff; color: #004080; }
+        .btn-secondary:hover { background: #004080; color: #fff; }
+        .btn-success { background: #28a745; color: #fff; border-color: #28a745; }
+        .btn-success:hover { background: #218838; }
+        .btn-warning { background: #ffc107; color: #000; border-color: #ffc107; }
+        .btn-danger { background: #dc3545; color: #fff; border-color: #dc3545; }
+        .btn-info { background: #17a2b8; color: #fff; border-color: #17a2b8; }
+        .btn-purple { background: #6f42c1; color: #fff; border-color: #6f42c1; }
+        .btn-sm { padding: 8px 14px; font-size: 11px; }
+        .btn-lg { padding: 16px 32px; font-size: 15px; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 700; color: #004080; font-size: 13px; }
+        .form-control { width: 100%; padding: 12px 14px; border: 2px solid #004080; border-radius: 6px; font-size: 14px; font-family: 'Oswald', Arial, sans-serif; }
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+        
+        .alert { padding: 1rem; border-radius: 6px; margin: 1rem 0; font-weight: 500; font-size: 13px; }
+        .alert-success { background: #d4edda; border: 2px solid #28a745; color: #155724; }
+        .alert-error { background: #f8d7da; border: 2px solid #dc3545; color: #721c24; }
+        .alert-info { background: #e7f3ff; border: 2px solid #004080; color: #004080; }
+        .alert-warning { background: #fff3cd; border: 2px solid #ffc107; color: #856404; }
+        
+        .config-card { background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border: 2px solid #004080; margin: 1rem 0; }
+        .config-card h4 { color: #004080; margin-bottom: 1rem; font-size: 16px; }
+        
+        .column-selector { display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0; }
+        .column-chip { padding: 10px 16px; background: #fff; border: 2px solid #004080; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+        .column-chip:hover { background: #e7f3ff; }
+        .column-chip.selected { background: #004080; color: #fff; }
+        .column-chip .chip-number { background: #fff; color: #004080; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+        .column-chip.selected .chip-number { background: #fff; color: #004080; }
+        .column-chip.chip-text { border-color: #28a745; }
+        .column-chip.chip-numeric { border-color: #ffc107; border-style: dashed; }
+        .column-chip.chip-text.selected { background: #28a745; border-color: #28a745; }
+        .column-chip.chip-numeric.selected { background: #ffc107; border-color: #ffc107; color: #000; }
+        
+        .selected-summary { background: #e7f3ff; border: 2px solid #004080; border-radius: 8px; padding: 15px 20px; margin: 20px 0; }
+        .selected-summary h5 { color: #004080; margin-bottom: 10px; font-size: 14px; }
+        .selected-summary .summary-item { display: inline-block; background: #004080; color: #fff; padding: 5px 12px; border-radius: 15px; margin: 3px; font-size: 12px; }
+        .selected-summary .summary-last { background: #28a745; }
+        
+        .table-container { max-height: 500px; overflow: auto; border: 2px solid #004080; border-radius: 8px; margin: 1rem 0; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .data-table th, .data-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #ddd; white-space: nowrap; }
+        .data-table th { background: #004080; color: #fff; font-weight: 700; position: sticky; top: 0; z-index: 10; }
+        .data-table tr:hover { background: #e7f3ff; }
+        .data-table tr:nth-child(even) { background: #f8f9fa; }
+        .data-table .highlight-col { background: #d4edda; }
+        .data-table th.highlight-col { background: #28a745; color: #fff; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+        .stats-card { background: #fff; padding: 1.5rem; border-radius: 8px; text-align: center; border: 3px solid #004080; }
+        .stats-card .metric-value { font-size: 2rem; color: #004080; font-weight: 700; }
+        .stats-card p { color: #666; font-size: 12px; text-transform: uppercase; margin-top: 5px; }
+        .stats-card.success { border-color: #28a745; }
+        .stats-card.success .metric-value { color: #28a745; }
+        .stats-card.warning { border-color: #ffc107; }
+        .stats-card.warning .metric-value { color: #856404; }
+        .stats-card.info { border-color: #17a2b8; }
+        .stats-card.info .metric-value { color: #17a2b8; }
+        
+        .results-section { margin-top: 30px; }
+        .results-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; }
+        
+        .tree-view { background: #f8f9fa; border: 2px solid #004080; border-radius: 8px; padding: 20px; margin: 20px 0; max-height: 600px; overflow: auto; }
+        .tree-node { margin-left: 20px; }
+        .tree-node-header { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #fff; border: 2px solid #ddd; border-radius: 6px; margin: 5px 0; cursor: pointer; transition: all 0.2s; }
+        .tree-node-header:hover { border-color: #004080; background: #e7f3ff; }
+        .tree-node-header.expanded { border-color: #004080; background: #004080; color: #fff; }
+        .tree-node-header .toggle { width: 20px; font-weight: 700; }
+        .tree-node-header .node-name { font-weight: 600; flex: 1; }
+        .tree-node-header .node-count { background: #28a745; color: #fff; padding: 2px 10px; border-radius: 10px; font-size: 11px; }
+        .tree-node-header.expanded .node-count { background: #fff; color: #28a745; }
+        .tree-node-children { display: none; margin-left: 15px; border-left: 2px solid #ddd; padding-left: 10px; }
+        .tree-node-children.show { display: block; }
+        .tree-leaf { padding: 6px 12px; margin: 3px 0; background: #d4edda; border-radius: 4px; font-size: 12px; color: #155724; }
+        
+        .level-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; margin-right: 8px; }
+        .level-badge.l1 { background: #004080; color: #fff; }
+        .level-badge.l2 { background: #17a2b8; color: #fff; }
+        .level-badge.l3 { background: #6f42c1; color: #fff; }
+        .level-badge.l4 { background: #fd7e14; color: #fff; }
+        .level-badge.l5 { background: #20c997; color: #fff; }
+        
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
+        .search-box input { flex: 1; padding: 12px 16px; border: 2px solid #004080; border-radius: 6px; font-size: 14px; font-family: 'Oswald', Arial, sans-serif; }
+        .search-box input:focus { outline: none; border-color: #0056b3; box-shadow: 0 0 0 3px rgba(0,64,128,0.2); }
+        
+        .tab-bar { display: flex; gap: 5px; margin-bottom: 20px; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 2px solid #004080; }
+        .tab-btn { padding: 12px 24px; background: #fff; border: 2px solid #ddd; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 13px; transition: all 0.2s; font-family: 'Oswald', Arial, sans-serif; }
+        .tab-btn:hover { border-color: #004080; }
+        .tab-btn.active { background: #004080; border-color: #004080; color: #fff; }
+        
+        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
+        .loading-spinner { width: 70px; height: 70px; border: 5px solid #e7f3ff; border-top: 5px solid #004080; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1.5rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { font-size: 1.5rem; font-weight: 700; color: #004080; }
+        
+        .hidden { display: none !important; }
+        
+        .page-footer { background-color: #004080; color: #ffffff; padding: 20px 30px; text-align: center; font-size: 13px; line-height: 1.7; font-weight: 500; border-radius: 0 0 8px 8px; }
+        .page-footer p { margin: 6px 0 0; font-size: 12px; color: #ffffff; }
+        
+        .quick-tip { background: #fff3cd; border: 2px solid #ffc107; border-radius: 6px; padding: 12px 15px; margin: 15px 0; font-size: 12px; color: #856404; }
+        
+        .expand-all-btns { display: flex; gap: 10px; margin-bottom: 15px; }
+        
+        .hierarchy-arrow { color: #004080; font-weight: 700; margin: 0 5px; }
+        
+        .duplicate-warning { background: #f8d7da; border: 2px solid #dc3545; border-radius: 6px; padding: 15px; margin: 15px 0; }
+        .duplicate-warning h5 { color: #721c24; margin-bottom: 10px; }
+        .duplicate-item { background: #fff; padding: 8px 12px; border-radius: 4px; margin: 5px 0; font-size: 12px; }
+        
+        @media (max-width: 768px) { 
+            .form-row { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .tab-bar { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loadingText">Processing...</div>
+    </div>
+
+    <div class="page-container">
+        <div class="page-header">
+            <div class="logo-row">
+                <div class="logo-box">
+                    <img src="https://github.com/mohamedsillahkanu/gdp-dashboard-2/raw/6c7463b0d5c3be150aafae695a4bcbbd8aeb1499/ICF-SL.jpg" alt="ICF-SL Logo">
+                </div>
+            </div>
+            <h3>Informatics Consultancy Firm-Sierra Leone<br>(ICF-SL)</h3>
+            <p class="tagline"><em>Driving Data-Driven Solutions for Health and Development</em></p>
+            <h1>ADMIN LEVEL HIERARCHY EXTRACTOR</h1>
+            <p class="subtitle">Extract Linked Administrative Hierarchies | Unique Values at Each Level</p>
+        </div>
+
+        <div class="content-card">
+            <div class="content-inner">
+                <div id="alertContainer"></div>
+
+                <!-- Step 1: Upload -->
+                <div id="uploadSection">
+                    <div class="section-header">
+                        <span class="section-icon">1</span>
+                        <span class="section-title">UPLOAD DATA FILE</span>
+                    </div>
+                    <div class="upload-box" id="uploadBox" onclick="document.getElementById('fileInput').click()">
+                        <h4>📊 Click to Upload Excel or CSV File</h4>
+                        <p>Supported formats: .xlsx, .xls, .csv</p>
+                        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)">
+                        <div class="upload-status" id="uploadStatus"></div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Configure -->
+                <div id="configSection" class="hidden">
+                    <div class="section-header">
+                        <span class="section-icon">2</span>
+                        <span class="section-title">SELECT ADMIN HIERARCHY COLUMNS</span>
+                    </div>
+                    
+                    <div class="config-card">
+                        <h4>📍 Select Columns in Hierarchical Order (Parent → Child)</h4>
+                        <p style="font-size:12px;color:#666;margin-bottom:10px;">
+                            Click columns in order from highest to lowest level (e.g., Region → District → Chiefdom → Facility).<br>
+                            The <strong>last column selected</strong> will have unique values extracted within each parent group.
+                        </p>
+                        <p style="font-size:11px;color:#666;margin-bottom:15px;">📝 = Text column (solid border) | 🔢 = Numeric column (dashed border) | Number in () = unique values</p>
+                        <div class="column-selector" id="columnSelector"></div>
+                    </div>
+                    
+                    <div id="selectionSummary" class="selected-summary hidden">
+                        <h5>📋 Selected Hierarchy:</h5>
+                        <div id="summaryContent"></div>
+                    </div>
+                    
+                    <div class="quick-tip" id="hierarchyTip" style="display:none;">
+                        <strong>💡 Tip:</strong> The hierarchy will extract unique combinations where each child is linked to its parent.
+                        For example: Western Area → Freetown → PHU1, Western Area → Freetown → PHU2
+                    </div>
+                    
+                    <div style="text-align:center;margin-top:20px;">
+                        <button class="btn btn-success btn-lg" id="extractBtn" onclick="extractHierarchy()" disabled>
+                            🔍 Extract Hierarchy
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Results -->
+                <div id="resultsSection" class="hidden">
+                    <div class="section-header">
+                        <span class="section-icon">3</span>
+                        <span class="section-title">EXTRACTED HIERARCHY</span>
+                    </div>
+                    
+                    <div class="stats-grid" id="statsGrid"></div>
+                    
+                    <div id="duplicateWarning" class="duplicate-warning hidden">
+                        <h5>⚠️ Hierarchy Integrity Issues Found</h5>
+                        <p style="font-size:12px;margin-bottom:10px;">Some values appear under multiple parents (possible data inconsistencies):</p>
+                        <div id="duplicateList"></div>
+                    </div>
+                    
+                    <div class="tab-bar">
+                        <button class="tab-btn active" onclick="showTab('tree')">🌳 Tree View</button>
+                        <button class="tab-btn" onclick="showTab('table')">📊 Table View</button>
+                        <button class="tab-btn" onclick="showTab('levels')">📈 By Level</button>
+                    </div>
+                    
+                    <div id="treeTab">
+                        <div class="search-box">
+                            <input type="text" id="searchInput" placeholder="Search for any value..." onkeyup="filterTree()">
+                            <button class="btn btn-primary" onclick="filterTree()">🔍 Search</button>
+                            <button class="btn btn-secondary" onclick="clearSearch()">✕ Clear</button>
+                        </div>
+                        <div class="expand-all-btns">
+                            <button class="btn btn-info btn-sm" onclick="expandAll()">➕ Expand All</button>
+                            <button class="btn btn-secondary btn-sm" onclick="collapseAll()">➖ Collapse All</button>
+                        </div>
+                        <div class="tree-view" id="treeView"></div>
+                    </div>
+                    
+                    <div id="tableTab" class="hidden">
+                        <div class="table-container" id="resultsTable"></div>
+                    </div>
+                    
+                    <div id="levelsTab" class="hidden">
+                        <div id="levelsContent"></div>
+                    </div>
+                    
+                    <div style="text-align:center;margin-top:25px;display:flex;justify-content:center;gap:15px;flex-wrap:wrap;">
+                        <button class="btn btn-success btn-lg" onclick="downloadHierarchy()">📥 Download Full Hierarchy (Excel)</button>
+                        <button class="btn btn-purple btn-lg" onclick="downloadByLevel()">📥 Download By Level (Excel)</button>
+                        <button class="btn btn-secondary btn-lg" onclick="resetAll()">🔄 Start Over</button>
+                    </div>
+                </div>
+
+                <!-- Data Preview -->
+                <div id="previewSection" class="hidden" style="margin-top:30px;">
+                    <div class="section-header">
+                        <span class="section-icon">📋</span>
+                        <span class="section-title">DATA PREVIEW</span>
+                    </div>
+                    <div class="table-container" id="previewTable"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page-footer">
+            <p style="margin: 0; font-weight: 700;">National Malaria Control Programme</p>
+            <p>Ministry of Health and Sanitation, Sierra Leone</p>
+            <p style="font-size: 10px;">© 2025 Informatics Consultancy Firm-Sierra Leone (ICF-SL)</p>
+        </div>
+    </div>
+
+    <script>
+        let rawData = [];
+        let columns = [];
+        let columnTypes = {};
+        let selectedColumns = [];
+        let extractedHierarchy = null;
+        let flatResults = [];
+        let hierarchyIssues = [];
+
+        // Analyze column type
+        function analyzeColumnType(colName) {
+            let textCount = 0;
+            let numericCount = 0;
+            let emptyCount = 0;
+            let totalChecked = 0;
+            
+            for (let i = 0; i < Math.min(rawData.length, 500); i++) {
+                const val = rawData[i][colName];
+                
+                if (val == null || String(val).trim() === '') {
+                    emptyCount++;
+                    continue;
+                }
+                
+                totalChecked++;
+                const strVal = String(val).trim();
+                
+                const num = Number(strVal);
+                if (!isNaN(num) && strVal !== '') {
+                    numericCount++;
+                } else {
+                    textCount++;
+                }
+            }
+            
+            if (totalChecked === 0) {
+                return { type: 'empty', textCount, numericCount, emptyCount };
+            }
+            
+            const textRatio = textCount / totalChecked;
+            
+            if (textRatio >= 0.5) {
+                return { type: 'text', textCount, numericCount, emptyCount };
+            } else {
+                return { type: 'numeric', textCount, numericCount, emptyCount };
+            }
+        }
+
+        async function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            showLoading('Reading file...');
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                rawData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                
+                if (rawData.length === 0) {
+                    throw new Error('File is empty or could not be parsed');
+                }
+                
+                columns = Object.keys(rawData[0]);
+                
+                columnTypes = {};
+                columns.forEach(col => {
+                    columnTypes[col] = analyzeColumnType(col);
+                });
+                
+                const textCols = columns.filter(c => columnTypes[c].type === 'text').length;
+                
+                document.getElementById('uploadBox').classList.add('loaded');
+                document.getElementById('uploadStatus').className = 'upload-status success';
+                document.getElementById('uploadStatus').textContent = `✓ Loaded ${rawData.length.toLocaleString()} rows × ${columns.length} columns (${textCols} text, ${columns.length - textCols} numeric)`;
+                
+                showDataPreview();
+                setupColumnSelector();
+                document.getElementById('configSection').classList.remove('hidden');
+                
+                hideLoading();
+                showAlert(`Successfully loaded ${rawData.length.toLocaleString()} records!`, 'success');
+                
+            } catch (err) {
+                hideLoading();
+                showAlert('Error reading file: ' + err.message, 'error');
+            }
+        }
+
+        function showDataPreview() {
+            document.getElementById('previewSection').classList.remove('hidden');
+            const previewCols = columns.slice(0, 10);
+            let html = '<table class="data-table"><thead><tr>';
+            html += previewCols.map(c => `<th>${escapeHtml(c)}</th>`).join('');
+            if (columns.length > 10) html += '<th>...</th>';
+            html += '</tr></thead><tbody>';
+            
+            rawData.slice(0, 50).forEach(row => {
+                html += '<tr>';
+                html += previewCols.map(c => `<td>${escapeHtml(String(row[c] ?? ''))}</td>`).join('');
+                if (columns.length > 10) html += '<td>...</td>';
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            document.getElementById('previewTable').innerHTML = html;
+        }
+
+        function setupColumnSelector() {
+            if (columns.length === 0) {
+                document.getElementById('columnSelector').innerHTML = '<p style="color:#dc3545;">No columns found!</p>';
+                return;
+            }
+            
+            let html = columns.map(col => {
+                const typeInfo = columnTypes[col];
+                const isText = typeInfo.type === 'text';
+                const typeLabel = isText ? '📝' : '🔢';
+                const typeClass = isText ? 'chip-text' : 'chip-numeric';
+                
+                const uniqueVals = new Set();
+                rawData.forEach(row => {
+                    const val = row[col];
+                    if (val != null && String(val).trim() !== '') {
+                        uniqueVals.add(String(val).trim());
+                    }
+                });
+                
+                return `<div class="column-chip ${typeClass}" data-col="${escapeHtml(col)}" onclick="toggleColumn('${escapeHtml(col).replace(/'/g, "\\'")}')">
+                    <span class="chip-number" style="display:none;"></span>
+                    <span>${typeLabel} ${escapeHtml(col)}</span>
+                    <span style="font-size:10px;color:#666;margin-left:5px;">(${uniqueVals.size})</span>
+                </div>`;
+            }).join('');
+            document.getElementById('columnSelector').innerHTML = html;
+        }
+
+        function toggleColumn(col) {
+            const idx = selectedColumns.indexOf(col);
+            if (idx > -1) {
+                selectedColumns.splice(idx, 1);
+            } else {
+                selectedColumns.push(col);
+            }
+            updateColumnChips();
+            updateSummary();
+            checkCanExtract();
+        }
+
+        function updateColumnChips() {
+            document.querySelectorAll('#columnSelector .column-chip').forEach(chip => {
+                const col = chip.dataset.col;
+                const idx = selectedColumns.indexOf(col);
+                const numberSpan = chip.querySelector('.chip-number');
+                
+                if (idx > -1) {
+                    chip.classList.add('selected');
+                    numberSpan.style.display = 'flex';
+                    numberSpan.textContent = idx + 1;
+                } else {
+                    chip.classList.remove('selected');
+                    numberSpan.style.display = 'none';
+                }
+            });
+        }
+
+        function updateSummary() {
+            const summary = document.getElementById('selectionSummary');
+            const content = document.getElementById('summaryContent');
+            const tip = document.getElementById('hierarchyTip');
+            
+            if (selectedColumns.length === 0) {
+                summary.classList.add('hidden');
+                tip.style.display = 'none';
+                return;
+            }
+            
+            summary.classList.remove('hidden');
+            tip.style.display = selectedColumns.length >= 2 ? 'block' : 'none';
+            
+            let html = '';
+            selectedColumns.forEach((col, i) => {
+                const isLast = i === selectedColumns.length - 1;
+                const levelClass = isLast ? 'summary-last' : '';
+                html += `<span class="summary-item ${levelClass}">
+                    <span class="level-badge l${(i % 5) + 1}">L${i + 1}</span>
+                    ${escapeHtml(col)}${isLast ? ' (Unique)' : ''}
+                </span>`;
+                if (i < selectedColumns.length - 1) {
+                    html += '<span class="hierarchy-arrow">→</span>';
+                }
+            });
+            
+            content.innerHTML = html;
+        }
+
+        function checkCanExtract() {
+            const canExtract = selectedColumns.length >= 1;
+            document.getElementById('extractBtn').disabled = !canExtract;
+        }
+
+        function extractHierarchy() {
+            if (selectedColumns.length === 0) {
+                showAlert('Please select at least one column', 'error');
+                return;
+            }
+            
+            showLoading('Extracting hierarchy...');
+            
+            setTimeout(() => {
+                try {
+                    console.log('=== EXTRACTION START ===');
+                    console.log('Selected Columns:', selectedColumns);
+                    
+                    // Build unique combinations
+                    const uniqueCombinations = new Map();
+                    hierarchyIssues = [];
+                    
+                    rawData.forEach((row, rowIdx) => {
+                        const values = [];
+                        let hasEmpty = false;
+                        
+                        for (const col of selectedColumns) {
+                            const val = row[col];
+                            if (val == null || String(val).trim() === '') {
+                                hasEmpty = true;
+                                values.push('(Empty)');
+                            } else {
+                                values.push(String(val).trim());
+                            }
+                        }
+                        
+                        // Create key from all values
+                        const key = values.join('|||');
+                        if (!uniqueCombinations.has(key)) {
+                            uniqueCombinations.set(key, values);
+                        }
+                    });
+                    
+                    console.log('Unique combinations:', uniqueCombinations.size);
+                    
+                    // Build hierarchical structure
+                    extractedHierarchy = buildHierarchy(uniqueCombinations);
+                    
+                    // Check for hierarchy issues (same child under multiple parents)
+                    checkHierarchyIntegrity(uniqueCombinations);
+                    
+                    // Build flat results for table/export
+                    flatResults = buildFlatResults(uniqueCombinations);
+                    
+                    // Display results
+                    displayStats();
+                    displayTreeView();
+                    displayTableView();
+                    displayLevelsView();
+                    displayHierarchyIssues();
+                    
+                    document.getElementById('resultsSection').classList.remove('hidden');
+                    
+                    hideLoading();
+                    showAlert(`Extraction complete! Found ${uniqueCombinations.size} unique hierarchy paths.`, 'success');
+                    
+                    document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+                    
+                } catch (err) {
+                    hideLoading();
+                    console.error(err);
+                    showAlert('Error during extraction: ' + err.message, 'error');
+                }
+            }, 100);
+        }
+
+        function buildHierarchy(uniqueCombinations) {
+            const root = { name: 'All', children: {}, count: 0 };
+            
+            uniqueCombinations.forEach((values, key) => {
+                root.count++;
+                let current = root;
+                
+                values.forEach((val, level) => {
+                    if (!current.children[val]) {
+                        current.children[val] = {
+                            name: val,
+                            level: level,
+                            column: selectedColumns[level],
+                            children: {},
+                            count: 0
+                        };
+                    }
+                    current.children[val].count++;
+                    current = current.children[val];
+                });
+            });
+            
+            return root;
+        }
+
+        function checkHierarchyIntegrity(uniqueCombinations) {
+            if (selectedColumns.length < 2) return;
+            
+            // For each level (except the first), check if values appear under multiple parents
+            for (let level = 1; level < selectedColumns.length; level++) {
+                const childToParents = new Map();
+                
+                uniqueCombinations.forEach((values, key) => {
+                    const child = values[level];
+                    const parent = values[level - 1];
+                    
+                    if (!childToParents.has(child)) {
+                        childToParents.set(child, new Set());
+                    }
+                    childToParents.set(child, childToParents.get(child).add(parent));
+                });
+                
+                // Find children with multiple parents
+                childToParents.forEach((parents, child) => {
+                    if (parents.size > 1) {
+                        hierarchyIssues.push({
+                            level: level,
+                            childColumn: selectedColumns[level],
+                            parentColumn: selectedColumns[level - 1],
+                            childValue: child,
+                            parentValues: Array.from(parents)
+                        });
+                    }
+                });
+            }
+        }
+
+        function displayHierarchyIssues() {
+            const warningDiv = document.getElementById('duplicateWarning');
+            const listDiv = document.getElementById('duplicateList');
+            
+            if (hierarchyIssues.length === 0) {
+                warningDiv.classList.add('hidden');
+                return;
+            }
+            
+            warningDiv.classList.remove('hidden');
+            
+            let html = '';
+            hierarchyIssues.slice(0, 10).forEach(issue => {
+                html += `<div class="duplicate-item">
+                    <strong>"${escapeHtml(issue.childValue)}"</strong> (${escapeHtml(issue.childColumn)}) 
+                    appears under ${issue.parentValues.length} different ${escapeHtml(issue.parentColumn)} values: 
+                    ${issue.parentValues.map(p => `<em>${escapeHtml(p)}</em>`).join(', ')}
+                </div>`;
+            });
+            
+            if (hierarchyIssues.length > 10) {
+                html += `<p style="margin-top:10px;font-style:italic;">... and ${hierarchyIssues.length - 10} more issues</p>`;
+            }
+            
+            listDiv.innerHTML = html;
+        }
+
+        function buildFlatResults(uniqueCombinations) {
+            const results = [];
+            
+            uniqueCombinations.forEach((values, key) => {
+                const row = {};
+                selectedColumns.forEach((col, i) => {
+                    row[col] = values[i];
+                });
+                results.push(row);
+            });
+            
+            // Sort by hierarchy
+            results.sort((a, b) => {
+                for (const col of selectedColumns) {
+                    const cmp = String(a[col]).localeCompare(String(b[col]));
+                    if (cmp !== 0) return cmp;
+                }
+                return 0;
+            });
+            
+            return results;
+        }
+
+        function displayStats() {
+            let html = `
+                <div class="stats-card">
+                    <div class="metric-value">${rawData.length.toLocaleString()}</div>
+                    <p>Total Rows</p>
+                </div>
+                <div class="stats-card success">
+                    <div class="metric-value">${flatResults.length.toLocaleString()}</div>
+                    <p>Unique Combinations</p>
+                </div>
+            `;
+            
+            // Stats for each level
+            selectedColumns.forEach((col, level) => {
+                const uniqueAtLevel = new Set();
+                flatResults.forEach(row => {
+                    uniqueAtLevel.add(row[col]);
+                });
+                
+                html += `
+                    <div class="stats-card info">
+                        <div class="metric-value">${uniqueAtLevel.size.toLocaleString()}</div>
+                        <p>Unique ${escapeHtml(col)}</p>
+                    </div>
+                `;
+            });
+            
+            if (hierarchyIssues.length > 0) {
+                html += `
+                    <div class="stats-card warning">
+                        <div class="metric-value">${hierarchyIssues.length}</div>
+                        <p>Integrity Issues</p>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('statsGrid').innerHTML = html;
+        }
+
+        function displayTreeView() {
+            const html = renderTreeNode(extractedHierarchy, -1);
+            document.getElementById('treeView').innerHTML = html;
+        }
+
+        function renderTreeNode(node, level) {
+            const children = Object.keys(node.children).sort();
+            
+            if (children.length === 0) {
+                return '';
+            }
+            
+            let html = '';
+            const isLastLevel = level === selectedColumns.length - 2;
+            
+            children.forEach(childKey => {
+                const child = node.children[childKey];
+                const levelClass = `l${(child.level % 5) + 1}`;
+                const hasChildren = Object.keys(child.children).length > 0;
+                const childCount = child.count;
+                
+                if (isLastLevel || !hasChildren) {
+                    // Leaf node
+                    html += `<div class="tree-leaf" data-search="${escapeHtml(childKey.toLowerCase())}">
+                        <span class="level-badge ${levelClass}">L${child.level + 1}</span>
+                        ${escapeHtml(childKey)}
+                    </div>`;
+                } else {
+                    // Branch node
+                    html += `
+                        <div class="tree-node" data-search="${escapeHtml(childKey.toLowerCase())}">
+                            <div class="tree-node-header" onclick="toggleNode(this)">
+                                <span class="toggle">▶</span>
+                                <span class="level-badge ${levelClass}">L${child.level + 1}</span>
+                                <span class="node-name">${escapeHtml(childKey)}</span>
+                                <span class="node-count">${childCount}</span>
+                            </div>
+                            <div class="tree-node-children">
+                                ${renderTreeNode(child, child.level)}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            return html;
+        }
+
+        function toggleNode(header) {
+            header.classList.toggle('expanded');
+            const children = header.nextElementSibling;
+            children.classList.toggle('show');
+            header.querySelector('.toggle').textContent = children.classList.contains('show') ? '▼' : '▶';
+        }
+
+        function expandAll() {
+            document.querySelectorAll('.tree-node-header').forEach(header => {
+                header.classList.add('expanded');
+                header.querySelector('.toggle').textContent = '▼';
+            });
+            document.querySelectorAll('.tree-node-children').forEach(children => {
+                children.classList.add('show');
+            });
+        }
+
+        function collapseAll() {
+            document.querySelectorAll('.tree-node-header').forEach(header => {
+                header.classList.remove('expanded');
+                header.querySelector('.toggle').textContent = '▶';
+            });
+            document.querySelectorAll('.tree-node-children').forEach(children => {
+                children.classList.remove('show');
+            });
+        }
+
+        function filterTree() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+            
+            document.querySelectorAll('.tree-node, .tree-leaf').forEach(el => {
+                el.style.display = '';
+            });
+            
+            if (!searchTerm) return;
+            
+            const matchingNodes = new Set();
+            
+            document.querySelectorAll('[data-search]').forEach(el => {
+                if (el.dataset.search.includes(searchTerm)) {
+                    matchingNodes.add(el);
+                    let parent = el.parentElement;
+                    while (parent) {
+                        if (parent.classList.contains('tree-node')) {
+                            matchingNodes.add(parent);
+                        }
+                        parent = parent.parentElement;
+                    }
+                }
+            });
+            
+            document.querySelectorAll('.tree-node').forEach(node => {
+                if (!matchingNodes.has(node)) {
+                    node.style.display = 'none';
+                }
+            });
+            
+            document.querySelectorAll('.tree-leaf').forEach(leaf => {
+                if (!leaf.dataset.search.includes(searchTerm)) {
+                    leaf.style.display = 'none';
+                }
+            });
+            
+            matchingNodes.forEach(node => {
+                if (node.classList.contains('tree-node')) {
+                    const header = node.querySelector(':scope > .tree-node-header');
+                    const children = node.querySelector(':scope > .tree-node-children');
+                    if (header && children) {
+                        header.classList.add('expanded');
+                        header.querySelector('.toggle').textContent = '▼';
+                        children.classList.add('show');
+                    }
+                }
+            });
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            document.querySelectorAll('.tree-node, .tree-leaf').forEach(el => {
+                el.style.display = '';
+            });
+            collapseAll();
+        }
+
+        function displayTableView() {
+            let html = '<table class="data-table"><thead><tr>';
+            selectedColumns.forEach((col, i) => {
+                const isLast = i === selectedColumns.length - 1;
+                html += `<th class="${isLast ? 'highlight-col' : ''}">
+                    <span class="level-badge l${(i % 5) + 1}">L${i + 1}</span>
+                    ${escapeHtml(col)}
+                </th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            flatResults.forEach(row => {
+                html += '<tr>';
+                selectedColumns.forEach((col, i) => {
+                    const isLast = i === selectedColumns.length - 1;
+                    html += `<td class="${isLast ? 'highlight-col' : ''}">${escapeHtml(String(row[col] ?? ''))}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            document.getElementById('resultsTable').innerHTML = html;
+        }
+
+        function displayLevelsView() {
+            let html = '';
+            
+            // For each level, show unique values
+            selectedColumns.forEach((col, level) => {
+                const uniqueValues = new Set();
+                flatResults.forEach(row => {
+                    uniqueValues.add(row[col]);
+                });
+                
+                const sortedValues = Array.from(uniqueValues).sort();
+                const levelClass = `l${(level % 5) + 1}`;
+                
+                html += `
+                    <div class="config-card">
+                        <h4>
+                            <span class="level-badge ${levelClass}">Level ${level + 1}</span>
+                            ${escapeHtml(col)} - ${sortedValues.length} unique values
+                        </h4>
+                        <div class="table-container" style="max-height:300px;">
+                            <table class="data-table">
+                                <thead><tr><th>#</th><th>${escapeHtml(col)}</th></tr></thead>
+                                <tbody>
+                `;
+                
+                sortedValues.forEach((val, i) => {
+                    html += `<tr><td>${i + 1}</td><td>${escapeHtml(val)}</td></tr>`;
+                });
+                
+                html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            // Summary of hierarchy
+            html += `
+                <div class="config-card" style="background:#d4edda;border-color:#28a745;">
+                    <h4 style="color:#155724;">📊 Hierarchy Summary</h4>
+                    <p>Total unique hierarchy paths: <strong>${flatResults.length}</strong></p>
+                    <p>Hierarchy structure: ${selectedColumns.map((c, i) => `<span class="level-badge l${(i % 5) + 1}">L${i + 1}</span> ${escapeHtml(c)}`).join(' → ')}</p>
+                </div>
+            `;
+            
+            document.getElementById('levelsContent').innerHTML = html;
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('#treeTab, #tableTab, #levelsTab').forEach(t => t.classList.add('hidden'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tab + 'Tab').classList.remove('hidden');
+        }
+
+        function downloadHierarchy() {
+            const ws = XLSX.utils.json_to_sheet(flatResults);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Hierarchy');
+            XLSX.writeFile(wb, 'admin_hierarchy.xlsx');
+            showAlert('Hierarchy downloaded!', 'success');
+        }
+
+        function downloadByLevel() {
+            const wb = XLSX.utils.book_new();
+            
+            // Sheet for each level
+            selectedColumns.forEach((col, level) => {
+                const uniqueValues = new Set();
+                flatResults.forEach(row => {
+                    uniqueValues.add(row[col]);
+                });
+                
+                const levelData = Array.from(uniqueValues).sort().map((val, i) => ({
+                    '#': i + 1,
+                    [col]: val
+                }));
+                
+                const ws = XLSX.utils.json_to_sheet(levelData);
+                const sheetName = `L${level + 1}_${col.substring(0, 20).replace(/[\/\\?*[\]]/g, '')}`;
+                XLSX.utils.book_append_sheet(wb, ws, sheetName);
+            });
+            
+            // Full hierarchy sheet
+            const wsAll = XLSX.utils.json_to_sheet(flatResults);
+            XLSX.utils.book_append_sheet(wb, wsAll, 'Full_Hierarchy');
+            
+            // Issues sheet if any
+            if (hierarchyIssues.length > 0) {
+                const issueData = hierarchyIssues.map(i => ({
+                    'Level': i.level,
+                    'Child Column': i.childColumn,
+                    'Child Value': i.childValue,
+                    'Parent Column': i.parentColumn,
+                    'Multiple Parents': i.parentValues.join(', ')
+                }));
+                const wsIssues = XLSX.utils.json_to_sheet(issueData);
+                XLSX.utils.book_append_sheet(wb, wsIssues, 'Integrity_Issues');
+            }
+            
+            XLSX.writeFile(wb, 'admin_hierarchy_by_level.xlsx');
+            showAlert('Hierarchy by level downloaded!', 'success');
+        }
+
+        function resetAll() {
+            rawData = [];
+            columns = [];
+            columnTypes = {};
+            selectedColumns = [];
+            extractedHierarchy = null;
+            flatResults = [];
+            hierarchyIssues = [];
+            
+            document.getElementById('uploadBox').classList.remove('loaded');
+            document.getElementById('uploadStatus').textContent = '';
+            document.getElementById('fileInput').value = '';
+            document.getElementById('configSection').classList.add('hidden');
+            document.getElementById('resultsSection').classList.add('hidden');
+            document.getElementById('previewSection').classList.add('hidden');
+            document.getElementById('selectionSummary').classList.add('hidden');
+            document.getElementById('hierarchyTip').style.display = 'none';
+            
+            showAlert('Reset complete. Upload a new file to start.', 'info');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showAlert(message, type) {
+            document.getElementById('alertContainer').innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            if (type === 'success' || type === 'info') {
+                setTimeout(() => {
+                    const alert = document.querySelector('.alert');
+                    if (alert) alert.remove();
+                }, 4000);
+            }
+        }
+
+        function showLoading(text) {
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
